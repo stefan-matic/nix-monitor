@@ -390,7 +390,8 @@ PluginComponent {
                                 buttonHeight: 30
                                 backgroundColor: Theme.error
                                 textColor: Theme.onError
-                                visible: root.operationRunning
+                                opacity: root.operationRunning ? 1 : 0
+                                enabled: root.operationRunning
                                 onClicked: {
                                     root.cancelOperation()
                                 }
