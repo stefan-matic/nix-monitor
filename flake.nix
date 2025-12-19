@@ -16,8 +16,7 @@
         }:
         with lib;
         let
-          cfg = if isNixOS then config.services.nix-monitor else config.programs.nix-monitor;
-          username = if isNixOS then config.services.nix-monitor.user else config.home.username;
+          cfg = config.programs.nix-monitor;
 
           configFile = pkgs.writeText "nix-monitor-config.json" (
             builtins.toJSON {
@@ -28,8 +27,9 @@
               updateInterval = cfg.updateInterval;
             }
           );
-
-          options = {
+        in
+        {
+          options.programs.nix-monitor = {
             enable = mkEnableOption "Nix Monitor plugin for DankMaterialShell";
 
             generationsCommand = mkOption {
@@ -85,57 +85,27 @@
               description = "Update interval in seconds for refreshing statistics";
               example = 600;
             };
-          }
-          // (
-            if isNixOS then
-              {
-                user = mkOption {
-                  type = types.str;
-                  description = "User for which to install the plugin";
-                  example = "youruser";
-                };
-              }
-            else
-              { }
-          );
-
-          configPath =
-            if isNixOS then
-              "/home/${username}/.config/DankMaterialShell/plugins/NixMonitor"
-            else
-              ".config/DankMaterialShell/plugins/NixMonitor";
-        in
-        {
-          options =
-            if isNixOS then
-              {
-                services.nix-monitor = options;
-              }
-            else
-              {
-                programs.nix-monitor = options;
-              };
+          };
 
           config = mkIf cfg.enable (mkMerge [
             {
               assertions = [
                 {
                   assertion = cfg.rebuildCommand != null;
-                  message = "${
-                    if isNixOS then "services" else "programs"
-                  }.nix-monitor.rebuildCommand must be set when nix-monitor is enabled";
+                  message = "programs.nix-monitor.rebuildCommand must be set when nix-monitor is enabled";
                 }
               ];
             }
             (
               if isNixOS then
                 {
-                  system.userActivationScripts.nix-monitor = ''
-                    mkdir -p /home/${username}/.config/DankMaterialShell/plugins/NixMonitor
-                    cp -rf ${self}/* /home/${username}/.config/DankMaterialShell/plugins/NixMonitor/
-                    cp ${configFile} /home/${username}/.config/DankMaterialShell/plugins/NixMonitor/config.json
-                    chown -R ${username} /home/${username}/.config/DankMaterialShell/plugins/NixMonitor
-                  '';
+                  environment.etc."xdg/quickshell/dms-plugins/NixMonitor" = {
+                    source = self;
+                  };
+
+                  environment.etc."xdg/quickshell/dms-plugins/NixMonitor/config.json" = {
+                    source = configFile;
+                  };
                 }
               else
                 {

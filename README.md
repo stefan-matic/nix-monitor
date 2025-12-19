@@ -53,9 +53,8 @@ Add to your NixOS `configuration.nix` flake:
       modules = [
         nix-monitor.nixosModules.default
         {
-          services.nix-monitor = {
+          programs.nix-monitor = {
             enable = true;
-            user = "youruser";
             
             # Required: customize for your setup
             rebuildCommand = [ 
@@ -108,6 +107,17 @@ Add to your home-manager `flake.nix`:
 
 ### Activation
 
+#### For NixOS
+
+1. Rebuild your NixOS configuration: `sudo nixos-rebuild switch --flake .#hostname`
+2. Restart DMS: `dms restart`
+3. Open DMS Settings → Plugins
+4. Click "Scan for Plugins"
+5. Toggle "Nix Monitor" ON
+6. Add to your DankBar layout
+
+#### For home-manager
+
 1. Rebuild your home-manager configuration: `home-manager switch --flake .#home`
 2. Restart DMS: `dms restart`
 3. Open DMS Settings → Plugins
@@ -117,10 +127,22 @@ Add to your home-manager `flake.nix`:
 
 ### Updating
 
+#### For NixOS
+
 After updating the plugin:
 ```bash
 nix flake update nix-monitor
-home-manager switch --flake .#home --impure
+sudo nixos-rebuild switch --flake .#hostname
+rm -rf ~/.cache/quickshell/qmlcache/
+dms restart
+```
+
+#### For home-manager
+
+After updating the plugin:
+```bash
+nix flake update nix-monitor
+home-manager switch --flake .#home
 rm -rf ~/.cache/quickshell/qmlcache/
 dms restart
 ```
@@ -164,12 +186,11 @@ If not overridden, the plugin uses these NixOS defaults:
 
 ### NixOS Module Example (Minimal)
 
-Uses all defaults - only rebuildCommand and user are required:
+Uses all defaults - only rebuildCommand is required:
 
 ```nix
-services.nix-monitor = {
+programs.nix-monitor = {
   enable = true;
-  user = "youruser";
   
   # Required: customize for your setup
   rebuildCommand = [ 
@@ -182,9 +203,8 @@ services.nix-monitor = {
 ### NixOS Module Example (Full Customization)
 
 ```nix
-services.nix-monitor = {
+programs.nix-monitor = {
   enable = true;
-  user = "youruser";
   
   rebuildCommand = [ 
     "bash" "-c" 
@@ -236,23 +256,7 @@ programs.nix-monitor = {
 
 ### Configuration Options
 
-#### For NixOS Module (`services.nix-monitor`)
-
-**Required:**
-- `user` - Username for which to install the plugin **(REQUIRED for NixOS)**
-- `rebuildCommand` - Command to run for system rebuild **(REQUIRED)**
-
-**Optional (with defaults):**
-- `generationsCommand` - Command to count system generations  
-  Default: `nix-env --list-generations --profile /nix/var/nix/profiles/system | wc -l`
-- `storeSizeCommand` - Command to get Nix store size  
-  Default: `du -sh /nix/store | cut -f1`
-- `gcCommand` - Command to run for garbage collection  
-  Default: `nix-collect-garbage -d`
-- `updateInterval` - Update interval in seconds  
-  Default: `300` (5 minutes)
-
-#### For home-manager Module (`programs.nix-monitor`)
+Both NixOS and home-manager modules use the same `programs.nix-monitor` namespace with identical options.
 
 **Required:**
 - `rebuildCommand` - Command to run for system rebuild **(REQUIRED)**
