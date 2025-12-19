@@ -59,7 +59,7 @@
               type = types.listOf types.str;
               description = "Command to run for system rebuild (required)";
               example = literalExpression ''
-                [ "/usr/bin/bash" "-l" "-c" "cd ~/.config/home-manager && home-manager switch --flake .#home 2>&1" ]
+                [ "bash" "-c" "cd ~/.config/home-manager && home-manager switch --flake .#home 2>&1" ]
               '';
             };
 

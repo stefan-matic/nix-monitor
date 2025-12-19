@@ -35,7 +35,7 @@ Access via DMS Settings → Plugins → Nix Monitor:
 
 ### As a Flake Input
 
-Add to your `flake.nix`:
+Add to your `flake.nix`. **Note:** The `rebuildCommand` examples below should be customized for your specific setup:
 
 For NixOS:
 ```nix
@@ -55,15 +55,15 @@ For NixOS:
           programs.nix-monitor = {
             enable = true;
             
-            # For NixOS:
+            # For NixOS (customize for your setup):
             rebuildCommand = [ 
-              "/usr/bin/bash" "-l" "-c" 
+              "bash" "-c" 
               "sudo nixos-rebuild switch --flake .#hostname 2>&1"
             ];
             
-            # Or for home-manager:
+            # Or for home-manager (customize for your setup):
             rebuildCommand = [ 
-              "/usr/bin/bash" "-l" "-c" 
+              "bash" "-c" 
               "cd ~/.config/home-manager && home-manager switch --flake .#home 2>&1"
             ];
           };
@@ -139,7 +139,7 @@ programs.nix-monitor = {
   
   # Only rebuildCommand is required - defaults work for NixOS
   rebuildCommand = [ 
-    "/usr/bin/bash" "-l" "-c" 
+    "bash" "-c" 
     "sudo nixos-rebuild switch --flake .#hostname 2>&1"
   ];
 };
@@ -152,13 +152,13 @@ programs.nix-monitor = {
   enable = true;
   
   rebuildCommand = [ 
-    "/usr/bin/bash" "-l" "-c" 
+    "bash" "-c" 
     "sudo nixos-rebuild switch --flake .#hostname 2>&1"
   ];
   
   # Use sudo for garbage collection
   gcCommand = [ 
-    "/usr/bin/bash" "-l" "-c" 
+    "bash" "-c" 
     "sudo nix-collect-garbage -d 2>&1" 
   ];
   
@@ -177,7 +177,7 @@ programs.nix-monitor = {
   
   # Required: specify your home-manager rebuild command
   rebuildCommand = [ 
-    "/usr/bin/bash" "-l" "-c" 
+    "bash" "-c" 
     "cd ~/.config/home-manager && home-manager switch -b backup --impure --flake .#home 2>&1"
   ];
 };
@@ -193,7 +193,7 @@ programs.nix-monitor = {
   generationsCommand = [ "sh" "-c" "home-manager generations 2>/dev/null | wc -l" ];
   
   rebuildCommand = [ 
-    "/usr/bin/bash" "-l" "-c" 
+    "bash" "-c" 
     "cd ~/.config/home-manager && home-manager switch -b backup --impure --flake .#home 2>&1"
   ];
   
