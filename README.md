@@ -37,7 +37,6 @@ Access via DMS Settings → Plugins → Nix Monitor:
 
 Add to your `flake.nix`. **Note:** The `rebuildCommand` examples below should be customized for your specific setup:
 
-For NixOS:
 ```nix
 {
   inputs = {
@@ -117,17 +116,20 @@ dms restart
 
 ## Configuration
 
-The plugin provides sensible defaults for Nix system monitoring, but **rebuildCommand is required** and must be configured for your specific setup.
+The plugin provides sensible defaults for NixOS system monitoring, but **rebuildCommand is required** and must be configured for your specific setup.
 
 ### Default Commands
 
-If not overridden, the plugin uses these defaults:
+If not overridden, the plugin uses these NixOS defaults:
 - `generationsCommand`: Lists system generations from `/nix/var/nix/profiles/system`
 - `storeSizeCommand`: Checks `/nix/store` disk usage with `du -sh`
 - `gcCommand`: Runs `nix-collect-garbage -d`
 - `updateInterval`: 300 seconds (5 minutes)
 
-**Note:** `rebuildCommand` has no default and must be explicitly configured.
+**Note:** `rebuildCommand` has no default and must be explicitly configured because rebuild commands vary significantly between:
+- NixOS with flakes vs without flakes
+- home-manager with flakes vs without flakes
+- System-wide vs user-specific configurations
 
 ### NixOS Example (Minimal)
 

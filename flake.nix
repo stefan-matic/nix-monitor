@@ -72,7 +72,7 @@
               ];
               description = "Command to run for garbage collection";
               example = literalExpression ''
-                [ "/usr/bin/bash" "-l" "-c" "nix-collect-garbage -d" ]
+                [ "bash" "-c" "nix-collect-garbage -d 2>&1" ]
               '';
             };
 
