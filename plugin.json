@@ -2,9 +2,10 @@
   "id": "nixMonitor",
   "name": "Nix Monitor",
   "description": "Monitor home-manager generations and Nix store disk usage with cleanup capabilities",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "author": "Anton Andersson",
   "icon": "inventory_2",
+  "capabilities": ["dankbar-widget"],
   "component": "./NixMonitor.qml",
   "settings": "./NixMonitorSettings.qml",
   "permissions": ["settings_read", "settings_write"]

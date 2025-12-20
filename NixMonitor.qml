@@ -13,6 +13,9 @@ PluginComponent {
     property bool showGenerations: pluginData.showGenerations !== undefined ? pluginData.showGenerations : true
     property bool showStoreSize: pluginData.showStoreSize !== undefined ? pluginData.showStoreSize : true
     property int gcThresholdGB: pluginData.gcThresholdGB || 50
+    property bool checkUpdates: pluginData.checkUpdates !== undefined ? pluginData.checkUpdates : true
+    property int updateCheckInterval: pluginData.updateCheckInterval || 3600
+    property string nixpkgsChannel: pluginData.nixpkgsChannel || "nixos-unstable"
 
     property int generationCount: 0
     property string storeSize: "..."
@@ -23,12 +26,18 @@ PluginComponent {
     property string consoleOutput: ""
     property bool showConsole: false
     property string runningOperation: ""
+    property string localRevision: "..."
+    property string remoteRevision: "..."
+    property bool isUpToDate: true
+    property bool isCheckingUpdates: false
 
     property var config: null
     property var generationsCommand: ["sh", "-c", "echo 0"]
     property var storeSizeCommand: ["sh", "-c", "echo ..."]
     property var rebuildCommand: ["sh", "-c", "echo 'No rebuild command configured'"]
     property var gcCommand: ["sh", "-c", "echo 'No GC command configured'"]
+    property var localRevisionCommand: ["sh", "-c", "nixos-version --hash 2>/dev/null | cut -c 1-7 || echo 'N/A'"]
+    property var remoteRevisionCommand: ["sh", "-c", "git ls-remote https://github.com/NixOS/nixpkgs.git nixos-unstable 2>/dev/null | cut -c 1-7 || echo 'N/A'"]
 
     property string configJsonContent: ""
 
@@ -62,6 +71,17 @@ PluginComponent {
                     if (configData.updateInterval) {
                         root.updateInterval = configData.updateInterval
                         updateTimer.interval = configData.updateInterval * 1000
+                    }
+                    if (configData.localRevisionCommand) {
+                        root.localRevisionCommand = configData.localRevisionCommand
+                    }
+                    if (configData.remoteRevisionCommand) {
+                        root.remoteRevisionCommand = configData.remoteRevisionCommand
+                    }
+                    if (configData.nixpkgsChannel) {
+                        root.nixpkgsChannel = configData.nixpkgsChannel
+                        // Update remote command with the configured channel
+                        root.remoteRevisionCommand = ["sh", "-c", "git ls-remote https://github.com/NixOS/nixpkgs.git " + configData.nixpkgsChannel + " 2>/dev/null | cut -c 1-7 || echo 'N/A'"]
                     }
                     console.info("Loaded custom config:", JSON.stringify(configData))
                 } catch (e) {
@@ -123,6 +143,14 @@ PluginComponent {
                 anchors.verticalCenter: parent.verticalCenter
                 visible: root.showStoreSize
             }
+
+            DankIcon {
+                name: "check"
+                size: root.iconSize * 0.8
+                color: root.isUpToDate ? Theme.success : Theme.warning
+                anchors.verticalCenter: parent.verticalCenter
+                visible: root.checkUpdates && !root.isCheckingUpdates
+            }
         }
     }
 
@@ -151,6 +179,14 @@ PluginComponent {
                 color: root.storeSizeGB > root.gcThresholdGB ? Theme.error : Theme.surfaceText
                 anchors.horizontalCenter: parent.horizontalCenter
                 visible: root.showStoreSize
+            }
+
+            DankIcon {
+                name: "check"
+                size: root.iconSize * 0.8
+                color: root.isUpToDate ? Theme.success : Theme.warning
+                anchors.horizontalCenter: parent.horizontalCenter
+                visible: root.checkUpdates && !root.isCheckingUpdates
             }
         }
     }
@@ -239,6 +275,80 @@ PluginComponent {
                                     font.pixelSize: Theme.fontSizeSmall
                                     color: Theme.surfaceVariantText
                                     anchors.horizontalCenter: parent.horizontalCenter
+                                }
+                            }
+                        }
+                    }
+
+                    StyledRect {
+                        width: parent.width
+                        height: nixpkgsUpdateContent.implicitHeight + Theme.spacingM * 2
+                        radius: Theme.cornerRadius
+                        color: Theme.surfaceContainerHigh
+                        visible: root.checkUpdates && !root.isCheckingUpdates
+
+                        Column {
+                            id: nixpkgsUpdateContent
+                            width: parent.width - Theme.spacingM * 2
+                            anchors.centerIn: parent
+                            spacing: Theme.spacingXS
+
+                            Row {
+                                width: parent.width
+                                spacing: Theme.spacingS
+
+                                DankIcon {
+                                    name: root.isUpToDate ? "check_circle" : "update"
+                                    size: Theme.iconSize
+                                    color: root.isUpToDate ? Theme.success : Theme.warning
+                                    anchors.verticalCenter: parent.verticalCenter
+                                }
+
+                                StyledText {
+                                    text: root.isUpToDate ? "NixOS is up to date" : "NixOS update available"
+                                    font.pixelSize: Theme.fontSizeMedium
+                                    font.weight: Font.Bold
+                                    color: Theme.surfaceText
+                                    anchors.verticalCenter: parent.verticalCenter
+                                }
+                            }
+
+                            Row {
+                                width: parent.width
+                                spacing: Theme.spacingM
+
+                                Column {
+                                    spacing: Theme.spacingXXS
+
+                                    StyledText {
+                                        text: "Local:"
+                                        font.pixelSize: Theme.fontSizeSmall
+                                        color: Theme.surfaceVariantText
+                                    }
+
+                                    StyledText {
+                                        text: root.localRevision
+                                        font.pixelSize: Theme.fontSizeSmall
+                                        font.family: "monospace"
+                                        color: Theme.surfaceText
+                                    }
+                                }
+
+                                Column {
+                                    spacing: Theme.spacingXXS
+
+                                    StyledText {
+                                        text: "Remote (" + root.nixpkgsChannel + "):"
+                                        font.pixelSize: Theme.fontSizeSmall
+                                        color: Theme.surfaceVariantText
+                                    }
+
+                                    StyledText {
+                                        text: root.remoteRevision
+                                        font.pixelSize: Theme.fontSizeSmall
+                                        font.family: "monospace"
+                                        color: Theme.surfaceText
+                                    }
                                 }
                             }
                         }
@@ -426,6 +536,14 @@ PluginComponent {
         onTriggered: root.refreshData()
     }
 
+    Timer {
+        id: updateCheckTimer
+        interval: root.updateCheckInterval * 1000
+        running: root.checkUpdates
+        repeat: true
+        onTriggered: root.checkNixpkgsUpdates()
+    }
+
     Process {
         id: generationCountProcess
         command: root.generationsCommand
@@ -538,12 +656,74 @@ PluginComponent {
         }
     }
 
+    Process {
+        id: localRevisionProcess
+        command: root.localRevisionCommand
+        running: false
+
+        stdout: SplitParser {
+            onRead: function(line) {
+                var revision = line.trim()
+                if (revision && revision !== "N/A") {
+                    root.localRevision = revision
+                } else {
+                    root.localRevision = "N/A"
+                }
+            }
+        }
+
+        onExited: function(exitCode, exitStatus) {
+            root.isCheckingUpdates = false
+            root.updateUpToDateStatus()
+        }
+    }
+
+    Process {
+        id: remoteRevisionProcess
+        command: root.remoteRevisionCommand
+        running: false
+
+        stdout: SplitParser {
+            onRead: function(line) {
+                var revision = line.trim()
+                if (revision && revision !== "N/A") {
+                    root.remoteRevision = revision
+                } else {
+                    root.remoteRevision = "N/A"
+                }
+            }
+        }
+
+        onExited: function(exitCode, exitStatus) {
+            root.isCheckingUpdates = false
+            root.updateUpToDateStatus()
+        }
+    }
+
 
 
     function refreshData() {
         root.isLoading = true
         generationCountProcess.running = true
         storeSizeProcess.running = true
+        if (root.checkUpdates) {
+            root.checkNixpkgsUpdates()
+        }
+    }
+
+    function checkNixpkgsUpdates() {
+        if (!root.isCheckingUpdates) {
+            root.isCheckingUpdates = true
+            localRevisionProcess.running = true
+            remoteRevisionProcess.running = true
+        }
+    }
+
+    function updateUpToDateStatus() {
+        if (root.localRevision !== "..." && root.remoteRevision !== "..." &&
+            root.localRevision !== "N/A" && root.remoteRevision !== "N/A") {
+            root.isUpToDate = (root.localRevision === root.remoteRevision)
+        }
     }
 
     function rebuildSystem() {

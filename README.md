@@ -9,12 +9,14 @@ A [DankMaterialShell](https://danklinux.com/) plugin for monitoring Nix store di
 ### Bar Widget Display
 - Generation count - Shows Nix system generations (configurable)
 - Store size - Shows Nix store disk usage (configurable)
+- Update status - Check icon shows if nixpkgs is up-to-date (green) or updates available (yellow)
 - Visual warnings - Icon and text turn red when store exceeds threshold
 - Auto-updates - Configurable refresh interval
 
 ### Detailed Popout Panel
 Click the widget to open a detailed view with:
 - Summary cards - Large stat cards for count and store size
+- NixOS update status - Shows local and remote nixpkgs revisions with update availability
 - Warning banner - Appears when store size exceeds threshold
 - Real-time console - View command output as it runs
 - Action buttons:
@@ -30,6 +32,9 @@ Access via DMS Settings → Plugins → Nix Monitor:
 - Show/hide store size
 - Update interval (60-3600 seconds)
 - Warning threshold (10-200 GB)
+- Enable/disable update checking
+- NixOS channel selection (unstable, 24.11, 24.05, 23.11)
+- Update check interval (300-86400 seconds)
 
 ## Installation
 
@@ -217,6 +222,9 @@ programs.nix-monitor = {
     "sudo nix-collect-garbage -d 2>&1" 
   ];
   
+  # Check for updates on the 24.11 stable channel
+  nixpkgsChannel = "nixos-24.11";
+  
   updateInterval = 600;
 };
 ```
@@ -270,12 +278,19 @@ Both NixOS and home-manager modules use the same `programs.nix-monitor` namespac
   Default: `nix-collect-garbage -d`
 - `updateInterval` - Update interval in seconds  
   Default: `300` (5 minutes)
+- `localRevisionCommand` - Command to get local nixpkgs revision  
+  Default: `nixos-version --hash | cut -c 1-7`
+- `remoteRevisionCommand` - Command to get remote nixpkgs revision  
+  Default: `git ls-remote https://github.com/NixOS/nixpkgs.git nixos-unstable | cut -c 1-7`
+- `nixpkgsChannel` - NixOS channel to check for updates  
+  Default: `nixos-unstable` (Options: `nixos-unstable`, `nixos-24.11`, `nixos-24.05`, `nixos-23.11`)
 
 ## Requirements
 
 - DankMaterialShell >= 1.0.0
 - Nix package manager
 - Shell (sh/bash)
+- git (for update checking)
 
 ## License
 

@@ -25,6 +25,9 @@
               rebuildCommand = cfg.rebuildCommand;
               gcCommand = cfg.gcCommand;
               updateInterval = cfg.updateInterval;
+              localRevisionCommand = cfg.localRevisionCommand;
+              remoteRevisionCommand = cfg.remoteRevisionCommand;
+              nixpkgsChannel = cfg.nixpkgsChannel;
             }
           );
         in
@@ -84,6 +87,39 @@
               default = 300;
               description = "Update interval in seconds for refreshing statistics";
               example = 600;
+            };
+
+            localRevisionCommand = mkOption {
+              type = types.listOf types.str;
+              default = [
+                "sh"
+                "-c"
+                "nixos-version --hash 2>/dev/null | cut -c 1-7 || echo 'N/A'"
+              ];
+              description = "Command to get local nixpkgs revision";
+              example = literalExpression ''
+                [ "sh" "-c" "nixos-version --hash | cut -c 1-7" ]
+              '';
+            };
+
+            remoteRevisionCommand = mkOption {
+              type = types.listOf types.str;
+              default = [
+                "sh"
+                "-c"
+                "git ls-remote https://github.com/NixOS/nixpkgs.git nixos-unstable 2>/dev/null | cut -c 1-7 || echo 'N/A'"
+              ];
+              description = "Command to get remote nixpkgs revision";
+              example = literalExpression ''
+                [ "sh" "-c" "git ls-remote https://github.com/NixOS/nixpkgs.git nixos-24.11 | cut -c 1-7" ]
+              '';
+            };
+
+            nixpkgsChannel = mkOption {
+              type = types.str;
+              default = "nixos-unstable";
+              description = "NixOS channel to check for updates";
+              example = "nixos-24.11";
             };
           };
 

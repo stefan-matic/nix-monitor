@@ -83,4 +83,43 @@ PluginSettings {
         maximum: 200
         unit: "GB"
     }
+
+    StyledText {
+        width: parent.width
+        text: "NixOS Update Checking"
+        font.pixelSize: Theme.fontSizeMedium
+        font.weight: Font.Bold
+        color: Theme.surfaceText
+        topPadding: Theme.spacingM
+    }
+
+    ToggleSetting {
+        settingKey: "checkUpdates"
+        label: "Check for Updates"
+        description: "Monitor nixpkgs for available updates"
+        defaultValue: true
+    }
+
+    DropdownSetting {
+        settingKey: "nixpkgsChannel"
+        label: "NixOS Channel"
+        description: "Which channel to check for updates"
+        defaultValue: "nixos-unstable"
+        options: [
+            { value: "nixos-unstable", label: "nixos-unstable" },
+            { value: "nixos-24.11", label: "nixos-24.11" },
+            { value: "nixos-24.05", label: "nixos-24.05" },
+            { value: "nixos-23.11", label: "nixos-23.11" }
+        ]
+    }
+
+    SliderSetting {
+        settingKey: "updateCheckInterval"
+        label: "Update Check Interval"
+        description: "How often to check for nixpkgs updates"
+        defaultValue: 3600
+        minimum: 300
+        maximum: 86400
+        unit: "sec"
+    }
 }
