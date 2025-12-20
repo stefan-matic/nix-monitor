@@ -29,6 +29,7 @@ PluginComponent {
     property string localRevision: "..."
     property string remoteRevision: "..."
     property bool isUpToDate: true
+    property bool canCompareVersions: false
     property bool isCheckingUpdates: false
 
     property var config: null
@@ -147,7 +148,7 @@ PluginComponent {
             DankIcon {
                 name: "check"
                 size: root.iconSize * 0.8
-                color: root.isUpToDate ? Theme.success : Theme.warning
+                color: root.canCompareVersions ? (root.isUpToDate ? Theme.success : Theme.warning) : Theme.error
                 anchors.verticalCenter: parent.verticalCenter
                 visible: root.checkUpdates && !root.isCheckingUpdates
             }
@@ -184,7 +185,7 @@ PluginComponent {
             DankIcon {
                 name: "check"
                 size: root.iconSize * 0.8
-                color: root.isUpToDate ? Theme.success : Theme.warning
+                color: root.canCompareVersions ? (root.isUpToDate ? Theme.success : Theme.warning) : Theme.error
                 anchors.horizontalCenter: parent.horizontalCenter
                 visible: root.checkUpdates && !root.isCheckingUpdates
             }
@@ -298,14 +299,14 @@ PluginComponent {
                                 spacing: Theme.spacingS
 
                                 DankIcon {
-                                    name: root.isUpToDate ? "check_circle" : "update"
+                                    name: root.canCompareVersions ? (root.isUpToDate ? "check_circle" : "update") : "error"
                                     size: Theme.iconSize
-                                    color: root.isUpToDate ? Theme.success : Theme.warning
+                                    color: root.canCompareVersions ? (root.isUpToDate ? Theme.success : Theme.warning) : Theme.error
                                     anchors.verticalCenter: parent.verticalCenter
                                 }
 
                                 StyledText {
-                                    text: root.isUpToDate ? "Nixpkgs is up to date" : "Nixpkgs update available"
+                                    text: root.canCompareVersions ? (root.isUpToDate ? "Nixpkgs is up to date" : "Nixpkgs update available") : "Could not fetch version info"
                                     font.pixelSize: Theme.fontSizeMedium
                                     font.weight: Font.Bold
                                     color: Theme.surfaceText
@@ -722,7 +723,11 @@ PluginComponent {
     function updateUpToDateStatus() {
         if (root.localRevision !== "..." && root.remoteRevision !== "..." &&
             root.localRevision !== "N/A" && root.remoteRevision !== "N/A") {
+            root.canCompareVersions = true
             root.isUpToDate = (root.localRevision === root.remoteRevision)
+        } else {
+            root.canCompareVersions = false
+            root.isUpToDate = false
         }
     }
 

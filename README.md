@@ -9,7 +9,10 @@ A [DankMaterialShell](https://danklinux.com/) plugin for monitoring Nix store di
 ### Bar Widget Display
 - Generation count - Shows Nix system generations (configurable)
 - Store size - Shows Nix store disk usage (configurable)
-- Update status - Check icon shows if nixpkgs is up-to-date (green) or updates available (yellow)
+- Update status - Check icon shows nixpkgs status:
+  - Green: Up-to-date
+  - Yellow: Update available
+  - Red: Could not fetch version info
 - Visual warnings - Icon and text turn red when store exceeds threshold
 - Auto-updates - Configurable refresh interval
 
