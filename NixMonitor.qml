@@ -682,7 +682,7 @@ PluginComponent {
 
     Process {
         id: rebuildProcess
-        command: root.rebuildCommand
+        command: []
         running: false
 
         stdout: SplitParser {
@@ -694,12 +694,6 @@ PluginComponent {
         stderr: SplitParser {
             onRead: function(line) {
                 root.consoleOutput += line + "\n"
-            }
-        }
-
-        onRunningChanged: {
-            if (running && root.sudoPassword) {
-                stdin.write(root.sudoPassword + "\n")
             }
         }
 
@@ -756,7 +750,7 @@ PluginComponent {
 
     Process {
         id: garbageCollectProcess
-        command: root.gcCommand
+        command: []
         running: false
 
         stdout: SplitParser {
@@ -768,12 +762,6 @@ PluginComponent {
         stderr: SplitParser {
             onRead: function(line) {
                 root.consoleOutput += line + "\n"
-            }
-        }
-
-        onRunningChanged: {
-            if (running && root.sudoPassword) {
-                stdin.write(root.sudoPassword + "\n")
             }
         }
 
@@ -874,6 +862,11 @@ PluginComponent {
         root.showConsole = true
         root.consoleOutput = "Starting system rebuild...\n"
         ToastService.showInfo("Starting system rebuild...")
+
+        // Construct command with password piped in
+        var baseCommand = root.rebuildCommand[root.rebuildCommand.length - 1]
+        var cmdWithPassword = "echo '" + root.sudoPassword + "' | " + baseCommand
+        rebuildProcess.command = ["bash", "-c", cmdWithPassword]
         rebuildProcess.running = true
     }
 
@@ -892,6 +885,11 @@ PluginComponent {
         root.showConsole = true
         root.consoleOutput = "Starting garbage collection...\n"
         ToastService.showInfo("Starting garbage collection...")
+
+        // Construct command with password piped in
+        var baseCommand = root.gcCommand[root.gcCommand.length - 1]
+        var cmdWithPassword = "echo '" + root.sudoPassword + "' | " + baseCommand
+        garbageCollectProcess.command = ["bash", "-c", cmdWithPassword]
         garbageCollectProcess.running = true
     }
 
