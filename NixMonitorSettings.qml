@@ -100,17 +100,12 @@ PluginSettings {
         defaultValue: true
     }
 
-    DropdownSetting {
+    StringSetting {
         settingKey: "nixpkgsChannel"
         label: "NixOS Channel"
-        description: "Which channel to check for updates"
+        description: "Which channel to check for updates (e.g., nixos-unstable, nixos-24.11, nixos-24.05)"
         defaultValue: "nixos-unstable"
-        options: [
-            { value: "nixos-unstable", label: "nixos-unstable" },
-            { value: "nixos-24.11", label: "nixos-24.11" },
-            { value: "nixos-24.05", label: "nixos-24.05" },
-            { value: "nixos-23.11", label: "nixos-23.11" }
-        ]
+        placeholder: "nixos-unstable"
     }
 
     SliderSetting {

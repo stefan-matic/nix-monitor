@@ -26,6 +26,8 @@ PluginComponent {
     property string consoleOutput: ""
     property bool showConsole: false
     property string runningOperation: ""
+    property string sudoPassword: ""
+    property bool showPasswordDialog: false
     property string localRevision: "..."
     property string remoteRevision: "..."
     property bool isUpToDate: true
@@ -36,6 +38,7 @@ PluginComponent {
     property var generationsCommand: ["sh", "-c", "echo 0"]
     property var storeSizeCommand: ["sh", "-c", "echo ..."]
     property var rebuildCommand: ["sh", "-c", "echo 'No rebuild command configured'"]
+    property var homeManagerCommand: ["sh", "-c", "echo 'No home-manager command configured'"]
     property var gcCommand: ["sh", "-c", "echo 'No GC command configured'"]
     property var localRevisionCommand: ["sh", "-c", "nixos-version --hash 2>/dev/null | cut -c 1-7 || echo 'N/A'"]
     property var remoteRevisionCommand: ["sh", "-c", "git ls-remote https://github.com/NixOS/nixpkgs.git nixos-unstable 2>/dev/null | cut -c 1-7 || echo 'N/A'"]
@@ -65,6 +68,9 @@ PluginComponent {
                     }
                     if (configData.rebuildCommand) {
                         root.rebuildCommand = configData.rebuildCommand
+                    }
+                    if (configData.homeManagerCommand) {
+                        root.homeManagerCommand = configData.homeManagerCommand
                     }
                     if (configData.gcCommand) {
                         root.gcCommand = configData.gcCommand
@@ -385,6 +391,77 @@ PluginComponent {
                         }
                     }
 
+                    StyledRect {
+                        width: parent.width
+                        height: passwordColumn.implicitHeight + Theme.spacingM * 2
+                        radius: Theme.cornerRadius
+                        color: Theme.surfaceContainerHigh
+
+                        Column {
+                            id: passwordColumn
+                            width: parent.width - Theme.spacingM * 2
+                            anchors.centerIn: parent
+                            spacing: Theme.spacingS
+
+                            StyledText {
+                                text: "Sudo Password"
+                                font.pixelSize: Theme.fontSizeSmall
+                                font.weight: Font.Bold
+                                color: Theme.surfaceText
+                            }
+
+                            Row {
+                                width: parent.width
+                                spacing: Theme.spacingS
+
+                                StyledRect {
+                                    width: parent.width - unlockButton.width - Theme.spacingS
+                                    height: 36
+                                    radius: Theme.cornerRadius / 2
+                                    color: Theme.surfaceContainer
+
+                                    TextInput {
+                                        id: passwordInput
+                                        anchors.fill: parent
+                                        anchors.margins: Theme.spacingS
+                                        echoMode: TextInput.Password
+                                        color: Theme.surfaceText
+                                        font.pixelSize: Theme.fontSizeSmall
+                                        verticalAlignment: TextInput.AlignVCenter
+                                        onAccepted: {
+                                            root.sudoPassword = text
+                                        }
+                                    }
+                                }
+
+                                DankButton {
+                                    id: unlockButton
+                                    text: root.sudoPassword ? "Locked" : "Set"
+                                    iconName: root.sudoPassword ? "lock" : "lock_open"
+                                    buttonHeight: 36
+                                    backgroundColor: root.sudoPassword ? Theme.success : Theme.surfaceContainerHighest
+                                    textColor: root.sudoPassword ? Theme.onSuccess : Theme.surfaceText
+                                    onClicked: {
+                                        if (root.sudoPassword) {
+                                            root.sudoPassword = ""
+                                            passwordInput.text = ""
+                                        } else {
+                                            root.sudoPassword = passwordInput.text
+                                        }
+                                    }
+                                }
+                            }
+
+                            StyledText {
+                                text: "Password is stored in memory only and cleared when locked"
+                                font.pixelSize: Theme.fontSizeXSmall
+                                color: Theme.surfaceVariantText
+                                wrapMode: Text.WordWrap
+                                width: parent.width
+                            }
+                        }
+                    }
+
                     Column {
                         width: parent.width
                         spacing: Theme.spacingS
@@ -405,7 +482,7 @@ PluginComponent {
                                 spacing: Theme.spacingS
 
                                 DankButton {
-                                    width: (parent.width - Theme.spacingS * 2) / 3
+                                    width: (parent.width - Theme.spacingS * 3) / 4
                                     text: "Refresh"
                                     iconName: "refresh"
                                     enabled: !root.isLoading && !root.operationRunning
@@ -415,24 +492,34 @@ PluginComponent {
                                 }
 
                                 DankButton {
-                                    width: (parent.width - Theme.spacingS * 2) / 3
+                                    width: (parent.width - Theme.spacingS * 3) / 4
                                     text: root.operationRunning && root.runningOperation === "rebuild" ? "Building..." : "Rebuild"
                                     iconName: "build"
                                     backgroundColor: Theme.secondary
                                     textColor: Theme.onSecondary
-                                    enabled: !root.operationRunning
+                                    enabled: !root.operationRunning && root.sudoPassword !== ""
                                     onClicked: {
                                         root.rebuildSystem()
                                     }
                                 }
 
                                 DankButton {
-                                    width: (parent.width - Theme.spacingS * 2) / 3
+                                    width: (parent.width - Theme.spacingS * 3) / 4
+                                    text: root.operationRunning && root.runningOperation === "home" ? "Switching..." : "Home"
+                                    iconName: "home"
+                                    enabled: !root.operationRunning
+                                    onClicked: {
+                                        root.switchHomeManager()
+                                    }
+                                }
+
+                                DankButton {
+                                    width: (parent.width - Theme.spacingS * 3) / 4
                                     text: root.operationRunning && root.runningOperation === "gc" ? "Running..." : "GC"
                                     iconName: "cleaning_services"
                                     backgroundColor: Theme.error
                                     textColor: Theme.onError
-                                    enabled: !root.operationRunning
+                                    enabled: !root.operationRunning && root.sudoPassword !== ""
                                     onClicked: {
                                         root.runGarbageCollect()
                                     }
@@ -462,19 +549,23 @@ PluginComponent {
                             color: Theme.surfaceContainerLow
 
                             Flickable {
+                                id: outputFlickable
                                 anchors.fill: parent
                                 anchors.margins: Theme.spacingS
                                 contentHeight: outputText.implicitHeight
                                 clip: true
 
-                                StyledText {
+                                TextEdit {
                                     id: outputText
                                     width: parent.width
                                     text: root.consoleOutput || "Waiting for output..."
                                     font.pixelSize: Theme.fontSizeSmall
                                     font.family: "monospace"
                                     color: Theme.surfaceText
-                                    wrapMode: Text.Wrap
+                                    wrapMode: TextEdit.Wrap
+                                    readOnly: true
+                                    selectByMouse: true
+                                    selectByKeyboard: true
                                 }
 
                                 onContentHeightChanged: {
@@ -606,6 +697,12 @@ PluginComponent {
             }
         }
 
+        onRunningChanged: {
+            if (running && root.sudoPassword) {
+                stdin.write(root.sudoPassword + "\n")
+            }
+        }
+
         onExited: function(exitCode, exitStatus) {
             root.operationRunning = false
             root.runningOperation = ""
@@ -624,6 +721,40 @@ PluginComponent {
     }
 
     Process {
+        id: homeManagerProcess
+        command: root.homeManagerCommand
+        running: false
+
+        stdout: SplitParser {
+            onRead: function(line) {
+                root.consoleOutput += line + "\n"
+            }
+        }
+
+        stderr: SplitParser {
+            onRead: function(line) {
+                root.consoleOutput += line + "\n"
+            }
+        }
+
+        onExited: function(exitCode, exitStatus) {
+            root.operationRunning = false
+            root.runningOperation = ""
+            if (exitCode === 0) {
+                root.consoleOutput += "\n✓ Home-manager switched successfully\n"
+                ToastService.showInfo("Home-manager switched successfully")
+                root.refreshData()
+            } else if (exitCode === 143 || exitCode === 130) {
+                root.consoleOutput += "\n✗ Home-manager switch cancelled by user\n"
+                ToastService.showInfo("Home-manager switch cancelled")
+            } else {
+                root.consoleOutput += "\n✗ Home-manager switch failed (exit code: " + exitCode + ")\n"
+                ToastService.showError("Home-manager switch failed")
+            }
+        }
+    }
+
+    Process {
         id: garbageCollectProcess
         command: root.gcCommand
         running: false
@@ -637,6 +768,12 @@ PluginComponent {
         stderr: SplitParser {
             onRead: function(line) {
                 root.consoleOutput += line + "\n"
+            }
+        }
+
+        onRunningChanged: {
+            if (running && root.sudoPassword) {
+                stdin.write(root.sudoPassword + "\n")
             }
         }
 
@@ -740,6 +877,15 @@ PluginComponent {
         rebuildProcess.running = true
     }
 
+    function switchHomeManager() {
+        root.operationRunning = true
+        root.runningOperation = "home"
+        root.showConsole = true
+        root.consoleOutput = "Starting home-manager switch...\n"
+        ToastService.showInfo("Starting home-manager switch...")
+        homeManagerProcess.running = true
+    }
+
     function runGarbageCollect() {
         root.operationRunning = true
         root.runningOperation = "gc"
@@ -753,6 +899,9 @@ PluginComponent {
         if (root.runningOperation === "rebuild" && rebuildProcess.running) {
             rebuildProcess.running = false
             root.consoleOutput += "\n✗ Cancelling rebuild...\n"
+        } else if (root.runningOperation === "home" && homeManagerProcess.running) {
+            homeManagerProcess.running = false
+            root.consoleOutput += "\n✗ Cancelling home-manager switch...\n"
         } else if (root.runningOperation === "gc" && garbageCollectProcess.running) {
             garbageCollectProcess.running = false
             root.consoleOutput += "\n✗ Cancelling garbage collection...\n"

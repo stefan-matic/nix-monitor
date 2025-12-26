@@ -18,3 +18,4 @@ result-*
 
 # QML cache
 *.qmlc
+config.json
