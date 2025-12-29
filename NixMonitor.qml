@@ -597,7 +597,7 @@ PluginComponent {
 
                                 DankButton {
                                     width: (parent.width - Theme.spacingS * 3) / 4
-                                    text: root.operationRunning && root.runningOperation === "home" ? "Switching..." : "Home"
+                                    text: root.operationRunning && root.runningOperation === "home" ? "Switching..." : "HM"
                                     iconName: "home"
                                     enabled: !root.operationRunning
                                     onClicked: {
