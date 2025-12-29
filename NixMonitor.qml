@@ -18,6 +18,7 @@ PluginComponent {
     property string nixpkgsChannel: pluginData.nixpkgsChannel || "nixos-unstable"
 
     property int generationCount: 0
+    property int homeManagerGenerationCount: 0
     property string storeSize: "..."
     property real storeSizeGB: 0
     property bool isLoading: true
@@ -36,6 +37,7 @@ PluginComponent {
 
     property var config: null
     property var generationsCommand: ["sh", "-c", "echo 0"]
+    property var homeManagerGenerationsCommand: ["sh", "-c", "home-manager generations 2>/dev/null | wc -l"]
     property var storeSizeCommand: ["sh", "-c", "echo ..."]
     property var rebuildCommand: ["sh", "-c", "echo 'No rebuild command configured'"]
     property var homeManagerCommand: ["sh", "-c", "echo 'No home-manager command configured'"]
@@ -62,6 +64,9 @@ PluginComponent {
                     var configData = JSON.parse(root.configJsonContent)
                     if (configData.generationsCommand) {
                         root.generationsCommand = configData.generationsCommand
+                    }
+                    if (configData.homeManagerGenerationsCommand) {
+                        root.homeManagerGenerationsCommand = configData.homeManagerGenerationsCommand
                     }
                     if (configData.storeSizeCommand) {
                         root.storeSizeCommand = configData.storeSizeCommand
@@ -127,7 +132,32 @@ PluginComponent {
             }
 
             StyledText {
-                text: "gen"
+                text: "sys"
+                font.pixelSize: Theme.fontSizeSmall
+                color: Theme.surfaceVariantText
+                anchors.verticalCenter: parent.verticalCenter
+                visible: root.showGenerations
+            }
+
+            Rectangle {
+                width: 1
+                height: Theme.iconSize
+                color: Theme.outlineVariant
+                anchors.verticalCenter: parent.verticalCenter
+                visible: root.showGenerations
+            }
+
+            StyledText {
+                text: root.isLoading ? "..." : root.homeManagerGenerationCount.toString()
+                font.pixelSize: Theme.fontSizeSmall
+                font.weight: Font.Medium
+                color: Theme.surfaceText
+                anchors.verticalCenter: parent.verticalCenter
+                visible: root.showGenerations
+            }
+
+            StyledText {
+                text: "hm"
                 font.pixelSize: Theme.fontSizeSmall
                 color: Theme.surfaceVariantText
                 anchors.verticalCenter: parent.verticalCenter
@@ -172,12 +202,40 @@ PluginComponent {
                 anchors.horizontalCenter: parent.horizontalCenter
             }
 
-            StyledText {
-                text: root.isLoading ? "..." : root.generationCount.toString()
-                font.pixelSize: Theme.fontSizeSmall
-                color: Theme.surfaceText
+            Row {
+                spacing: Theme.spacingXS
                 anchors.horizontalCenter: parent.horizontalCenter
                 visible: root.showGenerations
+
+                StyledText {
+                    text: root.isLoading ? "..." : root.generationCount.toString()
+                    font.pixelSize: Theme.fontSizeSmall
+                    color: Theme.surfaceText
+                }
+
+                StyledText {
+                    text: "sys"
+                    font.pixelSize: Theme.fontSizeXSmall
+                    color: Theme.surfaceVariantText
+                }
+            }
+
+            Row {
+                spacing: Theme.spacingXS
+                anchors.horizontalCenter: parent.horizontalCenter
+                visible: root.showGenerations
+
+                StyledText {
+                    text: root.isLoading ? "..." : root.homeManagerGenerationCount.toString()
+                    font.pixelSize: Theme.fontSizeSmall
+                    color: Theme.surfaceText
+                }
+
+                StyledText {
+                    text: "hm"
+                    font.pixelSize: Theme.fontSizeXSmall
+                    color: Theme.surfaceVariantText
+                }
             }
 
             StyledText {
@@ -219,7 +277,7 @@ PluginComponent {
                         spacing: Theme.spacingM
 
                         StyledRect {
-                            width: (parent.width - Theme.spacingM) / 2
+                            width: (parent.width - Theme.spacingM * 2) / 3
                             height: 100
                             radius: Theme.cornerRadius
                             color: Theme.surfaceContainerHigh
@@ -244,7 +302,7 @@ PluginComponent {
                                 }
 
                                 StyledText {
-                                    text: "Generations"
+                                    text: "System Gen"
                                     font.pixelSize: Theme.fontSizeSmall
                                     color: Theme.surfaceVariantText
                                     anchors.horizontalCenter: parent.horizontalCenter
@@ -253,7 +311,41 @@ PluginComponent {
                         }
 
                         StyledRect {
-                            width: (parent.width - Theme.spacingM) / 2
+                            width: (parent.width - Theme.spacingM * 2) / 3
+                            height: 100
+                            radius: Theme.cornerRadius
+                            color: Theme.surfaceContainerHigh
+
+                            Column {
+                                anchors.centerIn: parent
+                                spacing: Theme.spacingXS
+
+                                DankIcon {
+                                    name: "home"
+                                    size: 32
+                                    color: Theme.primary
+                                    anchors.horizontalCenter: parent.horizontalCenter
+                                }
+
+                                StyledText {
+                                    text: root.homeManagerGenerationCount.toString()
+                                    font.pixelSize: Theme.fontSizeXLarge
+                                    font.weight: Font.Bold
+                                    color: Theme.surfaceText
+                                    anchors.horizontalCenter: parent.horizontalCenter
+                                }
+
+                                StyledText {
+                                    text: "HM Gen"
+                                    font.pixelSize: Theme.fontSizeSmall
+                                    color: Theme.surfaceVariantText
+                                    anchors.horizontalCenter: parent.horizontalCenter
+                                }
+                            }
+                        }
+
+                        StyledRect {
+                            width: (parent.width - Theme.spacingM * 2) / 3
                             height: 100
                             radius: Theme.cornerRadius
                             color: Theme.surfaceContainerHigh
@@ -656,6 +748,25 @@ PluginComponent {
     }
 
     Process {
+        id: homeManagerGenerationCountProcess
+        command: root.homeManagerGenerationsCommand
+        running: false
+
+        stdout: SplitParser {
+            onRead: function(line) {
+                var count = parseInt(line.trim())
+                if (!isNaN(count)) {
+                    root.homeManagerGenerationCount = count
+                }
+            }
+        }
+
+        onExited: function(exitCode, exitStatus) {
+            root.isLoading = false
+        }
+    }
+
+    Process {
         id: storeSizeProcess
         command: root.storeSizeCommand
         running: false
@@ -831,6 +942,7 @@ PluginComponent {
     function refreshData() {
         root.isLoading = true
         generationCountProcess.running = true
+        homeManagerGenerationCountProcess.running = true
         storeSizeProcess.running = true
         if (root.checkUpdates) {
             root.checkNixpkgsUpdates()
